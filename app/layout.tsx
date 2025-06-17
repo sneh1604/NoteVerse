@@ -8,8 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "NoteVerse - AI-Powered Note Taking",
-  description: "A rich text notes application with AI features, Firebase authentication, and cloud storage.",
-    generator: 'v0.dev'
+  description: "A rich text notes application with AI features, Firebase authentication, and cloud storage."
 }
 
 export default function RootLayout({

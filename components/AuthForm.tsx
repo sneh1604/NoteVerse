@@ -137,7 +137,7 @@ export function AuthForm({
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Welcome to RichNotes
+          Welcome to NoteVerse
         </CardTitle>
         <CardDescription>Sign in to access your AI-powered notes</CardDescription>
       </CardHeader>

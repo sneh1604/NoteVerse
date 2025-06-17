@@ -7,8 +7,6 @@ import { Header } from "@/components/Header"
 import { NoteCard } from "@/components/NoteCard"
 import { NoteEditor } from "@/components/NoteEditor"
 import { LoginScreen } from "@/components/LoginScreen"
-import { IndexSetupGuide } from "@/components/IndexSetupGuide"
-import { GeminiSetupGuide } from "@/components/GeminiSetupGuide"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Plus, FileText, AlertTriangle, RefreshCw, Pin, Sparkles } from "lucide-react"
@@ -190,22 +188,6 @@ export default function NotesApp() {
         loading={authLoading}
         error={authError}
       />
-    )
-  }
-
-  // Show setup guides
-  if (showIndexGuide) {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container max-w-4xl mx-auto py-8">
-          <div className="mb-6">
-            <Button variant="outline" onClick={() => setShowIndexGuide(false)}>
-              ← Back to App
-            </Button>
-          </div>
-          <IndexSetupGuide />
-        </div>
-      </div>
     )
   }
 
