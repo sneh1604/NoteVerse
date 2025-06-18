@@ -41,6 +41,7 @@ export function RichTextEditor({
   const [showApiKeyWarning, setShowApiKeyWarning] = useState(false)
   const [apiStatus, setApiStatus] = useState<"unknown" | "working" | "error">("unknown")
   const isUpdatingRef = useRef(false)
+  const lastContentRef = useRef("")
   const { toast } = useToast()
 
   const geminiConfigured = isGeminiConfigured()
@@ -57,42 +58,74 @@ export function RichTextEditor({
     }
   }, [geminiConfigured])
 
-  // Initialize content without disrupting cursor
+  // Initialize content only when it actually changes
   useEffect(() => {
-    if (editorRef.current && content !== editorRef.current.innerHTML && !isUpdatingRef.current) {
+    if (editorRef.current && content !== lastContentRef.current && !isUpdatingRef.current) {
       const editor = editorRef.current
+
+      // Store current cursor position
       const selection = window.getSelection()
-      const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-      const cursorOffset = range?.startOffset || 0
-      const cursorNode = range?.startContainer
+      let cursorPosition = 0
+      let restoreCursor = false
+
+      if (selection && selection.rangeCount > 0 && editor.contains(selection.focusNode)) {
+        const range = selection.getRangeAt(0)
+        cursorPosition = range.startOffset
+        restoreCursor = true
+      }
 
       // Update content
       editor.innerHTML = content
+      lastContentRef.current = content
 
-      // Restore cursor position if possible
-      if (cursorNode && editor.contains(cursorNode)) {
+      // Restore cursor position only if we were focused and at a valid position
+      if (restoreCursor && document.activeElement === editor) {
         try {
-          const newRange = document.createRange()
-          newRange.setStart(cursorNode, Math.min(cursorOffset, cursorNode.textContent?.length || 0))
-          newRange.collapse(true)
-          selection?.removeAllRanges()
-          selection?.addRange(newRange)
+          const textNodes = getTextNodes(editor)
+          let totalLength = 0
+
+          for (const node of textNodes) {
+            const nodeLength = node.textContent?.length || 0
+            if (totalLength + nodeLength >= cursorPosition) {
+              const range = document.createRange()
+              const offset = Math.min(cursorPosition - totalLength, nodeLength)
+              range.setStart(node, offset)
+              range.collapse(true)
+              selection?.removeAllRanges()
+              selection?.addRange(range)
+              break
+            }
+            totalLength += nodeLength
+          }
         } catch (error) {
-          // Fallback: place cursor at end
-          const newRange = document.createRange()
-          newRange.selectNodeContents(editor)
-          newRange.collapse(false)
+          // If cursor restoration fails, place at end
+          const range = document.createRange()
+          range.selectNodeContents(editor)
+          range.collapse(false)
           selection?.removeAllRanges()
-          selection?.addRange(newRange)
+          selection?.addRange(range)
         }
       }
     }
   }, [content])
 
+  // Helper function to get all text nodes
+  const getTextNodes = (element: Node): Text[] => {
+    const textNodes: Text[] = []
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null)
+
+    let node
+    while ((node = walker.nextNode())) {
+      textNodes.push(node as Text)
+    }
+    return textNodes
+  }
+
   const execCommand = useCallback((command: string, value?: string) => {
     try {
       document.execCommand(command, false, value)
-      handleContentChange()
+      // Small delay to ensure command is executed before handling change
+      setTimeout(handleContentChange, 0)
     } catch (error) {
       console.error(`Error executing command ${command}:`, error)
     }
@@ -105,23 +138,50 @@ export function RichTextEditor({
       const htmlContent = editorRef.current.innerHTML
       const textContent = editorRef.current.textContent || ""
 
-      // Clean up any problematic HTML
-      const cleanedHtml = htmlContent
-        .replace(/<div><br><\/div>/g, "<br>")
-        .replace(/<div>/g, "<br>")
-        .replace(/<\/div>/g, "")
-        .replace(/^<br>/, "") // Remove leading br
+      // Only clean if necessary to avoid cursor disruption
+      let cleanedHtml = htmlContent
+      if (htmlContent.includes("<div>") || htmlContent.includes("<div><br></div>")) {
+        cleanedHtml = htmlContent
+          .replace(/<div><br><\/div>/g, "<br>")
+          .replace(/<div>/g, "<br>")
+          .replace(/<\/div>/g, "")
+          .replace(/^<br>/, "") // Remove leading br
+      }
 
-      // Update editor if content was cleaned
+      // Update lastContentRef to prevent unnecessary re-renders
+      lastContentRef.current = cleanedHtml
+
+      // Only update editor if content was actually cleaned
       if (cleanedHtml !== htmlContent) {
+        const selection = window.getSelection()
+        const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+        const cursorOffset = range?.startOffset || 0
+
         editorRef.current.innerHTML = cleanedHtml
+
+        // Restore cursor after cleaning
+        if (range && editorRef.current.firstChild) {
+          try {
+            const newRange = document.createRange()
+            newRange.setStart(
+              editorRef.current.firstChild,
+              Math.min(cursorOffset, editorRef.current.firstChild.textContent?.length || 0),
+            )
+            newRange.collapse(true)
+            selection?.removeAllRanges()
+            selection?.addRange(newRange)
+          } catch (error) {
+            // Ignore cursor restoration errors
+          }
+        }
       }
 
       onChange(textContent, cleanedHtml)
 
+      // Reset update flag after a brief delay
       setTimeout(() => {
         isUpdatingRef.current = false
-      }, 0)
+      }, 10)
     }
   }, [onChange])
 
@@ -131,7 +191,7 @@ export function RichTextEditor({
       if (e.key === "Enter") {
         e.preventDefault()
         document.execCommand("insertHTML", false, "<br>")
-        handleContentChange()
+        setTimeout(handleContentChange, 0)
         return
       }
 
@@ -150,7 +210,7 @@ export function RichTextEditor({
               const completion = await getAutoComplete(lastSentence, editorRef.current?.textContent || "")
               if (completion) {
                 document.execCommand("insertText", false, " " + completion)
-                handleContentChange()
+                setTimeout(handleContentChange, 0)
               }
             } catch (error) {
               console.error("Auto-complete error:", error)
@@ -188,7 +248,7 @@ export function RichTextEditor({
       e.preventDefault()
       const text = e.clipboardData.getData("text/plain")
       document.execCommand("insertText", false, text)
-      handleContentChange()
+      setTimeout(handleContentChange, 0)
     },
     [handleContentChange],
   )
@@ -233,7 +293,7 @@ export function RichTextEditor({
       selection?.addRange(range)
 
       document.execCommand("insertHTML", false, summaryHtml)
-      handleContentChange()
+      setTimeout(handleContentChange, 0)
 
       toast({
         title: "Summary generated",
@@ -293,7 +353,7 @@ export function RichTextEditor({
         editorRef.current!.innerHTML = enhanced
       }
 
-      handleContentChange()
+      setTimeout(handleContentChange, 0)
 
       toast({
         title: "Writing enhanced",

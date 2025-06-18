@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +37,12 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
   const [showEncryptPrompt, setShowEncryptPrompt] = useState(false)
   const [isEncrypting, setIsEncrypting] = useState(false)
   const [encryptError, setEncryptError] = useState("")
+
+  // Memoize color classes to prevent expensive recalculations
+  const colorClasses = useMemo(() => {
+    const colorConfig = NOTE_COLORS[color as NoteColor] || NOTE_COLORS.default
+    return theme === "dark" ? colorConfig.dark : colorConfig.light
+  }, [color, theme])
 
   useEffect(() => {
     if (note) {
@@ -110,14 +115,22 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
     }
   }
 
-  const getColorClasses = (colorKey: string) => {
+  // Optimized color change handler
+  const handleColorChange = (colorKey: string) => {
+    // Use requestAnimationFrame to prevent UI blocking
+    requestAnimationFrame(() => {
+      setColor(colorKey)
+    })
+  }
+
+  const getColorPreview = (colorKey: string) => {
     const colorConfig = NOTE_COLORS[colorKey as NoteColor] || NOTE_COLORS.default
     return theme === "dark" ? colorConfig.dark : colorConfig.light
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ${getColorClasses(color)}`}>
+      <DialogContent className={`max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ${colorClasses}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>{note ? "Edit Note" : "Create New Note"}</span>
@@ -151,8 +164,12 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {Object.entries(NOTE_COLORS).map(([key, colorConfig]) => (
-                    <DropdownMenuItem key={key} onClick={() => setColor(key)} className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded-full border-2 ${getColorClasses(key)}`} />
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => handleColorChange(key)}
+                      className="flex items-center gap-2"
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 ${getColorPreview(key)}`} />
                       {colorConfig.name}
                       {color === key && <span className="ml-auto">✓</span>}
                     </DropdownMenuItem>
@@ -175,8 +192,8 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
           {/* Tags */}
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+              {tags.map((tag, index) => (
+                <Badge key={`${tag}-${index}`} variant="secondary" className="flex items-center gap-1">
                   {tag}
                   <X className="h-3 w-3 cursor-pointer hover:text-destructive" onClick={() => removeTag(tag)} />
                 </Badge>
@@ -220,6 +237,7 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
             </Button>
           </div>
         </div>
+
         <PasswordPrompt
           isOpen={showEncryptPrompt}
           onClose={() => {
@@ -276,3 +294,4 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
     </Dialog>
   )
 }
+export default NoteEditor

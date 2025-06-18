@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -14,7 +14,7 @@ import {
 import { MoreVertical, Edit, Trash2, Calendar, Pin, PinOff, Palette, Lock, Unlock, Shield } from "lucide-react"
 import type { Note } from "@/types/note"
 import { NOTE_COLORS, type NoteColor } from "@/types/note"
-import { parseISO, format } from "date-fns"
+import { format } from "date-fns"
 import { useTheme } from "next-themes"
 import { PasswordPrompt } from "./PasswordPrompt"
 import { decryptContent } from "@/lib/encryption"
@@ -36,25 +36,44 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
   const [decryptError, setDecryptError] = useState("")
   const { theme } = useTheme()
 
-  const stripHtml = (html: string) => {
-    const tmp = document.createElement("div")
-    tmp.innerHTML = html
-    return tmp.textContent || tmp.innerText || ""
-  }
+  // Memoize expensive calculations to prevent freezing
+  const colorClasses = useMemo(() => {
+    const colorConfig = NOTE_COLORS[note.color as NoteColor] || NOTE_COLORS.default
+    const baseClasses = theme === "dark" ? colorConfig.dark : colorConfig.light
 
-  const truncateText = (text: string, maxLength = 150) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + "..."
-  }
+    // Add encryption styling
+    if (note.isEncrypted && !decryptedContent) {
+      return `${baseClasses} border-2 border-dashed opacity-75`
+    }
 
-  const getDisplayContent = () => {
+    return baseClasses
+  }, [note.color, note.isEncrypted, decryptedContent, theme])
+
+  const displayContent = useMemo(() => {
     if (note.isEncrypted && !decryptedContent) {
       return "🔒 This note is encrypted. Click to unlock and view content."
     }
 
     const content = decryptedContent || note.htmlContent || note.content
-    return stripHtml(content)
-  }
+    // Strip HTML safely
+    const tmp = document.createElement("div")
+    tmp.innerHTML = content
+    return tmp.textContent || tmp.innerText || ""
+  }, [note.isEncrypted, note.htmlContent, note.content, decryptedContent])
+
+  const truncatedContent = useMemo(() => {
+    const maxLength = 150
+    if (displayContent.length <= maxLength) return displayContent
+    return displayContent.substring(0, maxLength) + "..."
+  }, [displayContent])
+
+  const formattedDate = useMemo(() => {
+    try {
+      return format(note.updatedAt, "MMM d, yyyy")
+    } catch (error) {
+      return "Invalid date"
+    }
+  }, [note.updatedAt])
 
   const handleDecrypt = async (password: string) => {
     if (!note.encryptedData) return
@@ -91,28 +110,23 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     }
   }
 
-  const getColorClasses = (colorKey: string) => {
-    const colorConfig = NOTE_COLORS[colorKey as NoteColor] || NOTE_COLORS.default
-    const baseClasses = theme === "dark" ? colorConfig.dark : colorConfig.light
-
-    // Add encryption styling
-    if (note.isEncrypted && !decryptedContent) {
-      return `${baseClasses} border-2 border-dashed opacity-75`
-    }
-
-    return baseClasses
+  // Optimized color change handler to prevent freezing
+  const handleColorChange = (colorKey: string) => {
+    // Use requestAnimationFrame to prevent blocking the UI
+    requestAnimationFrame(() => {
+      onChangeColor(note.id, colorKey)
+    })
   }
 
-  const plainTextContent = getDisplayContent()
-
-  const formatNoteDate = (date: Date | string) => {
-    const dateObj = typeof date === "string" ? parseISO(date) : date
-    return format(dateObj, "MMM d, yyyy")
+  const getColorPreview = (colorKey: string) => {
+    const colorConfig = NOTE_COLORS[colorKey as NoteColor] || NOTE_COLORS.default
+    const previewClasses = theme === "dark" ? colorConfig.dark : colorConfig.light
+    return previewClasses
   }
 
   return (
     <>
-      <Card className={`hover:shadow-md transition-all cursor-pointer group relative ${getColorClasses(note.color)}`}>
+      <Card className={`hover:shadow-md transition-all cursor-pointer group relative ${colorClasses}`}>
         {note.isPinned && (
           <div className="absolute top-2 right-2 z-10">
             <Pin className="h-4 w-4 text-orange-500 fill-orange-500" />
@@ -192,11 +206,12 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
                       {Object.entries(NOTE_COLORS).map(([key, color]) => (
                         <DropdownMenuItem
                           key={key}
-                          onClick={() => onChangeColor(note.id, key)}
+                          onClick={() => handleColorChange(key)}
                           className="flex items-center gap-2"
                         >
-                          <div className={`w-4 h-4 rounded-full border-2 ${getColorClasses(key)}`} />
+                          <div className={`w-4 h-4 rounded-full border-2 ${getColorPreview(key)}`} />
                           {color.name}
+                          {note.color === key && <span className="ml-auto">✓</span>}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuContent>
@@ -213,7 +228,7 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            {formatNoteDate(note.updatedAt)}
+            {formattedDate}
             {note.isEncrypted && (
               <Badge variant="secondary" className="text-xs">
                 <Shield className="h-3 w-3 mr-1" />
@@ -227,14 +242,14 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
           <div className="text-sm text-muted-foreground mb-3 cursor-pointer" onClick={handleCardClick}>
             {showFullContent ? (
               note.isEncrypted && !decryptedContent ? (
-                <p className="italic">{plainTextContent}</p>
+                <p className="italic">{displayContent}</p>
               ) : (
                 <div dangerouslySetInnerHTML={{ __html: decryptedContent || note.htmlContent || note.content }} />
               )
             ) : (
-              <p className={note.isEncrypted && !decryptedContent ? "italic" : ""}>{truncateText(plainTextContent)}</p>
+              <p className={note.isEncrypted && !decryptedContent ? "italic" : ""}>{truncatedContent}</p>
             )}
-            {plainTextContent.length > 150 && !(note.isEncrypted && !decryptedContent) && (
+            {displayContent.length > 150 && !(note.isEncrypted && !decryptedContent) && (
               <button
                 onClick={(e) => {
                   e.stopPropagation()
@@ -250,7 +265,7 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
           {note.tags && note.tags.length > 0 && !(note.isEncrypted && !decryptedContent) && (
             <div className="flex flex-wrap gap-1">
               {note.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
+                <Badge key={`${tag}-${index}`} variant="secondary" className="text-xs">
                   {tag}
                 </Badge>
               ))}
@@ -279,3 +294,4 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     </>
   )
 }
+export default NoteCard
