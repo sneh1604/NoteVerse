@@ -1,21 +1,27 @@
 "use client"
 
 import type React from "react"
-import { useRef, useEffect, useState, useCallback, useLayoutEffect } from "react"
+import { useRef, useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, 
-  Type, Sparkles, FileText, Wand2, AlertCircle, CheckCircle
+  Bold,
+  Italic,
+  Underline,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Type,
+  Sparkles,
+  FileText,
+  Wand2,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react"
-import { summarizeText, enhanceWriting, isGeminiConfigured, testGeminiConnection } from "@/lib/ai"
+import { summarizeText, getAutoComplete, enhanceWriting, isGeminiConfigured, testGeminiConnection } from "@/lib/ai"
 import { useToast } from "@/hooks/use-toast"
-import { apiStatusAtom, type ApiStatus } from '@/lib/apiConfig'
-import { useAtom } from 'jotai'
-import { WordDefinition } from "@/components/WordDefinition"
-import { createRoot, Root } from "react-dom/client"
 
 interface RichTextEditorProps {
   content: string
@@ -24,101 +30,64 @@ interface RichTextEditorProps {
   className?: string
 }
 
-export function RichTextEditor({ content, onChange, placeholder = "Start writing...", className = "" }: RichTextEditorProps) {
+export function RichTextEditor({
+  content,
+  onChange,
+  placeholder = "Start writing...",
+  className = "",
+}: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const rootsMapRef = useRef<Map<HTMLElement, Root>>(new Map())
-  const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [isAiLoading, setIsAiLoading] = useState(false)
   const [showApiKeyWarning, setShowApiKeyWarning] = useState(false)
-  const [apiStatus, setApiStatus] = useAtom(apiStatusAtom)
+  const [apiStatus, setApiStatus] = useState<"unknown" | "working" | "error">("unknown")
+  const isUpdatingRef = useRef(false)
   const { toast } = useToast()
 
   const geminiConfigured = isGeminiConfigured()
 
-  const safeUnmountRoots = useCallback(() => {
-    // Clear previous cleanup if pending
-    if (cleanupTimeoutRef.current) {
-      clearTimeout(cleanupTimeoutRef.current)
+  // Test API connection on mount
+  useEffect(() => {
+    if (geminiConfigured) {
+      testGeminiConnection().then((result) => {
+        setApiStatus(result.success ? "working" : "error")
+        if (!result.success) {
+          console.error("Gemini API test failed:", result.error)
+        }
+      })
     }
+  }, [geminiConfigured])
 
-    // Schedule cleanup for next tick
-    cleanupTimeoutRef.current = setTimeout(() => {
-      rootsMapRef.current.forEach((root) => {
+  // Initialize content without disrupting cursor
+  useEffect(() => {
+    if (editorRef.current && content !== editorRef.current.innerHTML && !isUpdatingRef.current) {
+      const editor = editorRef.current
+      const selection = window.getSelection()
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+      const cursorOffset = range?.startOffset || 0
+      const cursorNode = range?.startContainer
+
+      // Update content
+      editor.innerHTML = content
+
+      // Restore cursor position if possible
+      if (cursorNode && editor.contains(cursorNode)) {
         try {
-          root.unmount()
+          const newRange = document.createRange()
+          newRange.setStart(cursorNode, Math.min(cursorOffset, cursorNode.textContent?.length || 0))
+          newRange.collapse(true)
+          selection?.removeAllRanges()
+          selection?.addRange(newRange)
         } catch (error) {
-          console.error('Error unmounting root:', error)
+          // Fallback: place cursor at end
+          const newRange = document.createRange()
+          newRange.selectNodeContents(editor)
+          newRange.collapse(false)
+          selection?.removeAllRanges()
+          selection?.addRange(newRange)
         }
-      })
-      rootsMapRef.current.clear()
-    }, 0)
-  }, [])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (cleanupTimeoutRef.current) {
-        clearTimeout(cleanupTimeoutRef.current)
-      }
-      safeUnmountRoots()
-    }
-  }, [safeUnmountRoots])
-
-  const updateWordDefinitions = useCallback(() => {
-    if (!editorRef.current) return
-
-    // Schedule cleanup of existing roots
-    safeUnmountRoots()
-
-    // Create new roots after a small delay
-    setTimeout(() => {
-      const hoverables = editorRef.current?.getElementsByClassName('hoverable-word')
-      if (!hoverables) return
-
-      Array.from(hoverables).forEach((element) => {
-        const htmlElement = element as HTMLElement
-        if (!rootsMapRef.current.has(htmlElement)) {
-          const word = htmlElement.textContent || ""
-          try {
-            const root = createRoot(htmlElement)
-            rootsMapRef.current.set(htmlElement, root)
-            root.render(
-              <WordDefinition word={word}>
-                {word}
-              </WordDefinition>
-            )
-          } catch (error) {
-            console.error('Error creating root:', error)
-          }
-        }
-      })
-    }, 0)
-  }, [])
-
-  // Initialize content effect
-  useEffect(() => {
-    if (editorRef.current && content) {
-      editorRef.current.innerHTML = content
-      updateWordDefinitions()
-    }
-  }, [content, updateWordDefinitions])
-
-  // Test API connection
-  useEffect(() => {
-    const checkApiConnection = async () => {
-      if (geminiConfigured) {
-        try {
-          const result = await testGeminiConnection()
-          setApiStatus(result.success ? 'working' : 'error')
-        } catch {
-          setApiStatus('error')
-        }
-      } else {
-        setApiStatus('unconfigured')
       }
     }
-    checkApiConnection()
-  }, [geminiConfigured, setApiStatus])
+  }, [content])
 
   const execCommand = useCallback((command: string, value?: string) => {
     try {
@@ -129,76 +98,120 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
     }
   }, [])
 
-  const wrapWordsWithDefinition = useCallback((content: string) => {
-    if (!content) return content
-    const words = content.split(/(\s+)/)
-    return words.map((word, i) => {
-      if (word.trim().length > 3 && /^[a-zA-Z]+$/.test(word)) {
-        return `<span class="hoverable-word">${word}</span>`
-      }
-      return word
-    }).join('')
-  }, [])
-
   const handleContentChange = useCallback(() => {
-    if (editorRef.current) {
+    if (editorRef.current && !isUpdatingRef.current) {
+      isUpdatingRef.current = true
+
       const htmlContent = editorRef.current.innerHTML
-      const processedContent = wrapWordsWithDefinition(htmlContent)
-      editorRef.current.innerHTML = processedContent
-      updateWordDefinitions()
       const textContent = editorRef.current.textContent || ""
-      onChange(textContent, processedContent)
-    }
-  }, [onChange, updateWordDefinitions, wrapWordsWithDefinition])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Tab' && !e.shiftKey) {
-      e.preventDefault()
-      execCommand('insertText', '    ')
-    }
+      // Clean up any problematic HTML
+      const cleanedHtml = htmlContent
+        .replace(/<div><br><\/div>/g, "<br>")
+        .replace(/<div>/g, "<br>")
+        .replace(/<\/div>/g, "")
+        .replace(/^<br>/, "") // Remove leading br
 
-    // Keyboard shortcuts
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key.toLowerCase()) {
-        case 'b':
-          e.preventDefault()
-          execCommand('bold')
-          break
-        case 'i':
-          e.preventDefault()
-          execCommand('italic')
-          break
-        case 'u':
-          e.preventDefault()
-          execCommand('underline')
-          break
+      // Update editor if content was cleaned
+      if (cleanedHtml !== htmlContent) {
+        editorRef.current.innerHTML = cleanedHtml
       }
-    }
-  }, [execCommand])
 
-  const handleAiOperation = async (operation: 'summarize' | 'enhance') => {
+      onChange(textContent, cleanedHtml)
+
+      setTimeout(() => {
+        isUpdatingRef.current = false
+      }, 0)
+    }
+  }, [onChange])
+
+  const handleKeyDown = useCallback(
+    async (e: React.KeyboardEvent) => {
+      // Handle Enter key properly
+      if (e.key === "Enter") {
+        e.preventDefault()
+        document.execCommand("insertHTML", false, "<br>")
+        handleContentChange()
+        return
+      }
+
+      // Auto-complete on Tab (only if Gemini is configured and working)
+      if (e.key === "Tab" && !e.shiftKey && geminiConfigured && apiStatus === "working") {
+        e.preventDefault()
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          const textBefore = range.startContainer.textContent?.substring(0, range.startOffset) || ""
+          const lastSentence = textBefore.split(".").pop()?.trim() || ""
+
+          if (lastSentence.length > 10) {
+            setIsAiLoading(true)
+            try {
+              const completion = await getAutoComplete(lastSentence, editorRef.current?.textContent || "")
+              if (completion) {
+                document.execCommand("insertText", false, " " + completion)
+                handleContentChange()
+              }
+            } catch (error) {
+              console.error("Auto-complete error:", error)
+            } finally {
+              setIsAiLoading(false)
+            }
+          }
+        }
+        return
+      }
+
+      // Keyboard shortcuts
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case "b":
+            e.preventDefault()
+            execCommand("bold")
+            break
+          case "i":
+            e.preventDefault()
+            execCommand("italic")
+            break
+          case "u":
+            e.preventDefault()
+            execCommand("underline")
+            break
+        }
+      }
+    },
+    [execCommand, geminiConfigured, apiStatus, handleContentChange],
+  )
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      e.preventDefault()
+      const text = e.clipboardData.getData("text/plain")
+      document.execCommand("insertText", false, text)
+      handleContentChange()
+    },
+    [handleContentChange],
+  )
+
+  const handleSummarize = async () => {
     if (!geminiConfigured) {
       setShowApiKeyWarning(true)
       return
     }
 
-    if (apiStatus !== 'working') {
+    if (apiStatus === "error") {
       toast({
         title: "API Connection Error",
-        description: "Please check your API key configuration.",
+        description: "Gemini API is not responding. Please check your API key.",
         variant: "destructive",
       })
       return
     }
 
-    const text = operation === 'enhance' && window.getSelection()?.toString()
-      ? window.getSelection()?.toString()
-      : editorRef.current?.textContent
-
-    if (!text?.trim()) {
+    if (!editorRef.current?.textContent?.trim()) {
       toast({
-        title: "No content",
-        description: `Please ${operation === 'enhance' ? 'select text or ' : ''}write some content first.`,
+        title: "No content to summarize",
+        description: "Please write some content first.",
         variant: "destructive",
       })
       return
@@ -206,26 +219,30 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
 
     setIsAiLoading(true)
     try {
-      const result = operation === 'summarize' 
-        ? await summarizeText(text)
-        : await enhanceWriting(text)
+      const summary = await summarizeText(editorRef.current.textContent)
 
-      if (operation === 'summarize') {
-        const summary = `<div class="ai-summary">${result}</div>`
-        editorRef.current!.innerHTML = summary + editorRef.current!.innerHTML
-      } else {
-        document.execCommand('insertText', false, result)
-      }
+      // Insert summary at the end with proper formatting
+      const summaryHtml = `<div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid rgb(59, 130, 246);"><strong>📝 Summary:</strong> ${summary}</div>`
 
+      // Place cursor at end and insert
+      const selection = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(editorRef.current)
+      range.collapse(false)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+
+      document.execCommand("insertHTML", false, summaryHtml)
       handleContentChange()
+
       toast({
-        title: `${operation === 'summarize' ? 'Summary' : 'Enhancement'} complete`,
-        description: "Content has been updated.",
+        title: "Summary generated",
+        description: "AI summary has been added to your note.",
       })
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: `Failed to ${operation}`,
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        title: "Error generating summary",
+        description: error.message || "Please try again later.",
         variant: "destructive",
       })
     } finally {
@@ -233,13 +250,101 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
     }
   }
 
+  const handleEnhanceWriting = async () => {
+    if (!geminiConfigured) {
+      setShowApiKeyWarning(true)
+      return
+    }
+
+    if (apiStatus === "error") {
+      toast({
+        title: "API Connection Error",
+        description: "Gemini API is not responding. Please check your API key.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const selection = window.getSelection()
+    let textToEnhance = ""
+
+    if (selection && selection.toString().trim()) {
+      textToEnhance = selection.toString()
+    } else if (editorRef.current?.textContent?.trim()) {
+      textToEnhance = editorRef.current.textContent
+    } else {
+      toast({
+        title: "No content to enhance",
+        description: "Please select text or write some content first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsAiLoading(true)
+    try {
+      const enhanced = await enhanceWriting(textToEnhance)
+
+      if (selection && selection.toString().trim()) {
+        // Replace selected text
+        document.execCommand("insertText", false, enhanced)
+      } else {
+        // Replace all content
+        editorRef.current!.innerHTML = enhanced
+      }
+
+      handleContentChange()
+
+      toast({
+        title: "Writing enhanced",
+        description: "Your text has been improved by AI.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error enhancing writing",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAiLoading(false)
+    }
+  }
+
+  const getApiStatusIcon = () => {
+    switch (apiStatus) {
+      case "working":
+        return <CheckCircle className="h-3 w-3 text-green-500" />
+      case "error":
+        return <AlertCircle className="h-3 w-3 text-red-500" />
+      default:
+        return <Sparkles className="h-3 w-3" />
+    }
+  }
+
+  const getApiStatusText = () => {
+    if (!geminiConfigured) return "AI features disabled"
+
+    switch (apiStatus) {
+      case "working":
+        return "AI ready - Press Tab for auto-complete"
+      case "error":
+        return "AI connection error"
+      default:
+        return "Testing AI connection..."
+    }
+  }
+
   return (
     <div className={`border rounded-lg overflow-hidden ${className}`}>
+      {/* API Key Warning */}
       {showApiKeyWarning && (
         <Alert className="m-4 border-orange-200 bg-orange-50 dark:bg-orange-900/20">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
-            <span>Gemini API Key required for AI features</span>
+            <div>
+              <p className="font-medium">Gemini API Key Required</p>
+              <p className="text-sm">Add your GEMINI_API_KEY to environment variables to use AI features.</p>
+            </div>
             <Button variant="outline" size="sm" onClick={() => setShowApiKeyWarning(false)}>
               Dismiss
             </Button>
@@ -247,84 +352,96 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
         </Alert>
       )}
 
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-muted/50">
-        <div className="flex items-center gap-1">
-          {/* Basic formatting controls */}
-          <Button variant="ghost" size="sm" onClick={() => execCommand("bold")} className="h-8 w-8 p-0">
-            <Bold className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => execCommand("italic")} className="h-8 w-8 p-0">
-            <Italic className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => execCommand("underline")} className="h-8 w-8 p-0">
-            <Underline className="h-4 w-4" />
-          </Button>
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
+        {/* Text Formatting */}
+        <Button variant="ghost" size="sm" onClick={() => execCommand("bold")} className="h-8 w-8 p-0">
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => execCommand("italic")} className="h-8 w-8 p-0">
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => execCommand("underline")} className="h-8 w-8 p-0">
+          <Underline className="h-4 w-4" />
+        </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6" />
 
-          {/* Alignment */}
-          <Button variant="ghost" size="sm" onClick={() => execCommand("justifyLeft")} className="h-8 w-8 p-0">
-            <AlignLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => execCommand("justifyCenter")} className="h-8 w-8 p-0">
-            <AlignCenter className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => execCommand("justifyRight")} className="h-8 w-8 p-0">
-            <AlignRight className="h-4 w-4" />
-          </Button>
+        {/* Alignment */}
+        <Button variant="ghost" size="sm" onClick={() => execCommand("justifyLeft")} className="h-8 w-8 p-0">
+          <AlignLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => execCommand("justifyCenter")} className="h-8 w-8 p-0">
+          <AlignCenter className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => execCommand("justifyRight")} className="h-8 w-8 p-0">
+          <AlignRight className="h-4 w-4" />
+        </Button>
 
-          <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6" />
 
-          {/* Font Size */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <Type className="h-4 w-4 mr-1" />
-                Size
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => execCommand("fontSize", "1")}>Small</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => execCommand("fontSize", "3")}>Normal</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => execCommand("fontSize", "5")}>Large</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => execCommand("fontSize", "7")}>Extra Large</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Font Size */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Type className="h-4 w-4 mr-1" />
+              Size
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => execCommand("fontSize", "1")}>Small</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => execCommand("fontSize", "3")}>Normal</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => execCommand("fontSize", "5")}>Large</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => execCommand("fontSize", "7")}>Extra Large</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-          <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6" />
 
-          {/* AI Features */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleAiOperation('summarize')}
-            disabled={isAiLoading}
-            className="h-8"
-          >
-            <FileText className="h-4 w-4 mr-1" />
-            {isAiLoading ? "Processing..." : "Summarize"}
-          </Button>
+        {/* AI Features */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSummarize}
+          disabled={isAiLoading || !geminiConfigured || apiStatus === "error"}
+          className="h-8 px-2"
+        >
+          <FileText className="h-4 w-4 mr-1" />
+          {isAiLoading ? "Summarizing..." : "Summarize"}
+        </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleAiOperation('enhance')}
-            disabled={isAiLoading}
-            className="h-8"
-          >
-            <Wand2 className="h-4 w-4 mr-1" />
-            {isAiLoading ? "Processing..." : "Enhance"}
-          </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleEnhanceWriting}
+          disabled={isAiLoading || !geminiConfigured || apiStatus === "error"}
+          className="h-8 px-2"
+        >
+          <Wand2 className="h-4 w-4 mr-1" />
+          {isAiLoading ? "Enhancing..." : "Enhance"}
+        </Button>
+
+        <div className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+          {getApiStatusIcon()}
+          {getApiStatusText()}
         </div>
       </div>
 
+      {/* Editor */}
       <div
         ref={editorRef}
         contentEditable
         onInput={handleContentChange}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none dark:prose-invert"
-        style={{ whiteSpace: "pre-wrap" }}
+        style={{
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          direction: "ltr",
+          textAlign: "left",
+        }}
+        suppressContentEditableWarning={true}
         data-placeholder={placeholder}
       />
 
@@ -333,16 +450,19 @@ export function RichTextEditor({ content, onChange, placeholder = "Start writing
           content: attr(data-placeholder);
           color: rgb(156, 163, 175);
           pointer-events: none;
+          position: absolute;
         }
-        .ai-summary {
-          background: rgba(59, 130, 246, 0.1);
-          padding: 12px;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          border-left: 4px solid rgb(59, 130, 246);
+        
+        [contenteditable] {
+          outline: none;
+        }
+        
+        [contenteditable] br {
+          display: block;
+          margin: 0;
+          padding: 0;
         }
       `}</style>
     </div>
   )
 }
-export default RichTextEditor
