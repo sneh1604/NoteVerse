@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Search, Plus, Sun, Moon, LogOut, Menu, X, Settings, Laptop } from "lucide-react"
+import { Search, Plus, Sun, Moon, LogOut, Menu, X, Settings } from "lucide-react"
 import { useTheme } from "next-themes"
 import type { User as UserType } from "@/types/note"
 import { cn } from "@/lib/utils"
@@ -23,14 +23,14 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
 
   return (
     <header className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center gap-4 px-4 md:px-6">
+      <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-2 sm:px-4 md:px-6">
         {/* Left Section */}
-        <div className="flex items-center gap-4 min-w-[240px]">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-[50px] sm:min-w-[240px]">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={onMenuClick}
-            className="rounded-full hover:bg-accent"
+            className="rounded-full hover:bg-accent sm:flex"
           >
             <Menu className="h-5 w-5" />
           </Button>
@@ -41,35 +41,34 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
         </div>
 
         {/* Center Section - Search */}
-        <div className="flex-1 max-w-[750px] mx-auto">
-          <div className="relative w-full">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <Input
-              type="search"
-              placeholder="Search notes..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full h-11 pl-10 pr-4 bg-accent/50 border-none rounded-full 
-                focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/70
-                hover:bg-accent/70 transition-colors"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onSearchChange("")}
-                className="absolute inset-y-0 right-1 my-auto h-8 w-8 rounded-full hover:bg-accent"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
+        <div className="flex-1 max-w-[750px] mx-auto relative">
+          <div className="absolute inset-y-0 left-2 sm:left-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-muted-foreground" />
           </div>
+          <Input
+            type="search"
+            placeholder="Search notes..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="w-full h-9 sm:h-11 pl-8 sm:pl-10 pr-4 bg-accent/50 border-none rounded-full 
+              focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/70
+              hover:bg-accent/70 transition-colors text-sm sm:text-base"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onSearchChange("")}
+              className="absolute inset-y-0 right-1 my-auto h-7 w-7 sm:h-8 sm:w-8 rounded-full hover:bg-accent"
+            >
+              <X className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+          )}
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-2 min-w-[240px] justify-end">
+        <div className="flex items-center gap-1 sm:gap-2 min-w-[100px] sm:min-w-[240px] justify-end">
+          {/* New Note Button - Desktop */}
           <Button
             onClick={onNewNote}
             size="sm"
@@ -78,22 +77,25 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
             <Plus className="h-4 w-4" />
             <span>New Note</span>
           </Button>
+
+          {/* New Note Button - Mobile */}
           <Button
             onClick={onNewNote}
             size="icon"
-            className="md:hidden rounded-full"
+            className="md:hidden h-9 w-9 rounded-full"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
           </Button>
 
+          {/* Settings Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="rounded-full hover:bg-accent"
+                className="rounded-full hover:bg-accent h-9 w-9 sm:h-10 sm:w-10"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -103,17 +105,22 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
               <DropdownMenuItem onClick={() => setTheme("dark")}>
                 <Moon className="h-4 w-4 mr-2" /> Dark
               </DropdownMenuItem>
+              {/* Mobile-only menu items */}
+              <DropdownMenuItem className="md:hidden" onClick={onNewNote}>
+                <Plus className="h-4 w-4 mr-2" /> New Note
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="rounded-full hover:bg-accent"
+                className="rounded-full hover:bg-accent h-9 w-9 sm:h-10 sm:w-10"
               >
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                   <AvatarImage src={user.photoURL} />
                   <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
                 </Avatar>

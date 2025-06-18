@@ -73,9 +73,6 @@ export function LoginScreen({
             </div>
           </div>
 
-          <div className="mt-auto text-sm text-muted-foreground">
-            © {new Date().getFullYear()} NoteVerse. All rights reserved.
-          </div>
         </div>
       </div>
 
