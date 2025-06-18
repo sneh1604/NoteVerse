@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import { useNotes } from "@/hooks/useNotes"
 import { Header } from "@/components/Header"
@@ -16,6 +16,8 @@ import { isGeminiConfigured } from "@/lib/ai"
 import { PasswordPrompt } from "@/components/PasswordPrompt"
 import { Sidebar } from "@/components/Sidebar"
 import { cn } from "@/lib/utils"
+import { useTheme } from "next-themes"
+
 
 export default function NotesApp() {
   const {
@@ -39,6 +41,9 @@ export default function NotesApp() {
     toggleEncryption,
   } = useNotes(user?.uid || null)
 
+   const [mounted, setMounted] = useState(false)
+   const { theme } = useTheme()
+
   const [selectedNote, setSelectedNote] = useState<Note | null>(null)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -55,6 +60,9 @@ export default function NotesApp() {
 
   const geminiConfigured = isGeminiConfigured()
 
+   useEffect(() => {
+    setMounted(true)
+  }, [])
   const filteredNotes = useMemo(() => {
     if (!searchTerm.trim()) return notes
 
@@ -170,7 +178,7 @@ export default function NotesApp() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading || !mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

@@ -32,17 +32,29 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
   const [newTag, setNewTag] = useState("")
   const [color, setColor] = useState<string>("default")
   const [isPinned, setIsPinned] = useState(false)
-  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const { theme, resolvedTheme } = useTheme()
 
   const [showEncryptPrompt, setShowEncryptPrompt] = useState(false)
   const [isEncrypting, setIsEncrypting] = useState(false)
   const [encryptError, setEncryptError] = useState("")
 
+  // Ensure component is mounted before applying theme
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Memoize color classes to prevent expensive recalculations
   const colorClasses = useMemo(() => {
+    // Don't apply theme-specific classes until mounted to prevent hydration mismatch
+    if (!mounted) {
+      return "bg-white border-gray-200" // Default fallback
+    }
+
     const colorConfig = NOTE_COLORS[color as NoteColor] || NOTE_COLORS.default
-    return theme === "dark" ? colorConfig.dark : colorConfig.light
-  }, [color, theme])
+    const currentTheme = resolvedTheme || theme
+    return currentTheme === "dark" ? colorConfig.dark : colorConfig.light
+  }, [color, theme, resolvedTheme, mounted])
 
   useEffect(() => {
     if (note) {
@@ -124,8 +136,11 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
   }
 
   const getColorPreview = (colorKey: string) => {
+    if (!mounted) return "bg-white border-gray-200"
+
     const colorConfig = NOTE_COLORS[colorKey as NoteColor] || NOTE_COLORS.default
-    return theme === "dark" ? colorConfig.dark : colorConfig.light
+    const currentTheme = resolvedTheme || theme
+    return currentTheme === "dark" ? colorConfig.dark : colorConfig.light
   }
 
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -34,12 +34,24 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null)
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptError, setDecryptError] = useState("")
-  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const { theme, resolvedTheme } = useTheme()
+
+  // Ensure component is mounted before applying theme
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Memoize expensive calculations to prevent freezing
   const colorClasses = useMemo(() => {
+    // Don't apply theme-specific classes until mounted to prevent hydration mismatch
+    if (!mounted) {
+      return "bg-white border-gray-200" // Default fallback
+    }
+
     const colorConfig = NOTE_COLORS[note.color as NoteColor] || NOTE_COLORS.default
-    const baseClasses = theme === "dark" ? colorConfig.dark : colorConfig.light
+    const currentTheme = resolvedTheme || theme
+    const baseClasses = currentTheme === "dark" ? colorConfig.dark : colorConfig.light
 
     // Add encryption styling
     if (note.isEncrypted && !decryptedContent) {
@@ -47,7 +59,7 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     }
 
     return baseClasses
-  }, [note.color, note.isEncrypted, decryptedContent, theme])
+  }, [note.color, note.isEncrypted, decryptedContent, theme, resolvedTheme, mounted])
 
   const displayContent = useMemo(() => {
     if (note.isEncrypted && !decryptedContent) {
@@ -119,9 +131,37 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
   }
 
   const getColorPreview = (colorKey: string) => {
+    if (!mounted) return "bg-white border-gray-200"
+
     const colorConfig = NOTE_COLORS[colorKey as NoteColor] || NOTE_COLORS.default
-    const previewClasses = theme === "dark" ? colorConfig.dark : colorConfig.light
+    const currentTheme = resolvedTheme || theme
+    const previewClasses = currentTheme === "dark" ? colorConfig.dark : colorConfig.light
     return previewClasses
+  }
+
+  // Show loading state until theme is resolved
+  if (!mounted) {
+    return (
+      <Card className="hover:shadow-md transition-all cursor-pointer group relative bg-white border-gray-200 animate-pulse">
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-8 w-8 bg-gray-200 rounded"></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-24"></div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
