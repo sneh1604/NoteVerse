@@ -37,14 +37,11 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
   const [mounted, setMounted] = useState(false)
   const { theme, resolvedTheme } = useTheme()
 
-  // Ensure component is mounted before applying theme
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Memoize expensive calculations to prevent freezing
   const colorClasses = useMemo(() => {
-    // Don't apply theme-specific classes until mounted to prevent hydration mismatch
     if (!mounted) {
       return "bg-white border-gray-200" // Default fallback
     }
@@ -53,7 +50,6 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     const currentTheme = resolvedTheme || theme
     const baseClasses = currentTheme === "dark" ? colorConfig.dark : colorConfig.light
 
-    // Add encryption styling
     if (note.isEncrypted && !decryptedContent) {
       return `${baseClasses} border-2 border-dashed opacity-75`
     }
@@ -67,7 +63,6 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     }
 
     const content = decryptedContent || note.htmlContent || note.content
-    // Strip HTML safely
     const tmp = document.createElement("div")
     tmp.innerHTML = content
     return tmp.textContent || tmp.innerText || ""
@@ -114,17 +109,13 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
 
   const handleToggleEncryption = () => {
     if (note.isEncrypted) {
-      // Decrypt the note (remove encryption)
       setShowPasswordPrompt(true)
     } else {
-      // Encrypt the note
       onToggleEncryption(note.id)
     }
   }
 
-  // Optimized color change handler to prevent freezing
   const handleColorChange = (colorKey: string) => {
-    // Use requestAnimationFrame to prevent blocking the UI
     requestAnimationFrame(() => {
       onChangeColor(note.id, colorKey)
     })
@@ -139,7 +130,6 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
     return previewClasses
   }
 
-  // Show loading state until theme is resolved
   if (!mounted) {
     return (
       <Card className="hover:shadow-md transition-all cursor-pointer group relative bg-white border-gray-200 animate-pulse">

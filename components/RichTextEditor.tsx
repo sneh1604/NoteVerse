@@ -46,7 +46,6 @@ export function RichTextEditor({
 
   const geminiConfigured = isGeminiConfigured()
 
-  // Test API connection on mount
   useEffect(() => {
     if (geminiConfigured) {
       testGeminiConnection().then((result) => {
@@ -58,12 +57,10 @@ export function RichTextEditor({
     }
   }, [geminiConfigured])
 
-  // Initialize content only when it actually changes
   useEffect(() => {
     if (editorRef.current && content !== lastContentRef.current && !isUpdatingRef.current) {
       const editor = editorRef.current
 
-      // Store current cursor position
       const selection = window.getSelection()
       let cursorPosition = 0
       let restoreCursor = false
@@ -74,11 +71,9 @@ export function RichTextEditor({
         restoreCursor = true
       }
 
-      // Update content
       editor.innerHTML = content
       lastContentRef.current = content
 
-      // Restore cursor position only if we were focused and at a valid position
       if (restoreCursor && document.activeElement === editor) {
         try {
           const textNodes = getTextNodes(editor)
@@ -98,7 +93,6 @@ export function RichTextEditor({
             totalLength += nodeLength
           }
         } catch (error) {
-          // If cursor restoration fails, place at end
           const range = document.createRange()
           range.selectNodeContents(editor)
           range.collapse(false)
@@ -109,7 +103,6 @@ export function RichTextEditor({
     }
   }, [content])
 
-  // Helper function to get all text nodes
   const getTextNodes = (element: Node): Text[] => {
     const textNodes: Text[] = []
     const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null)
@@ -124,7 +117,6 @@ export function RichTextEditor({
   const execCommand = useCallback((command: string, value?: string) => {
     try {
       document.execCommand(command, false, value)
-      // Small delay to ensure command is executed before handling change
       setTimeout(handleContentChange, 0)
     } catch (error) {
       console.error(`Error executing command ${command}:`, error)
@@ -138,20 +130,17 @@ export function RichTextEditor({
       const htmlContent = editorRef.current.innerHTML
       const textContent = editorRef.current.textContent || ""
 
-      // Only clean if necessary to avoid cursor disruption
       let cleanedHtml = htmlContent
       if (htmlContent.includes("<div>") || htmlContent.includes("<div><br></div>")) {
         cleanedHtml = htmlContent
           .replace(/<div><br><\/div>/g, "<br>")
           .replace(/<div>/g, "<br>")
           .replace(/<\/div>/g, "")
-          .replace(/^<br>/, "") // Remove leading br
+          .replace(/^<br>/, "") 
       }
 
-      // Update lastContentRef to prevent unnecessary re-renders
       lastContentRef.current = cleanedHtml
 
-      // Only update editor if content was actually cleaned
       if (cleanedHtml !== htmlContent) {
         const selection = window.getSelection()
         const range = selection?.rangeCount ? selection.getRangeAt(0) : null
@@ -159,7 +148,6 @@ export function RichTextEditor({
 
         editorRef.current.innerHTML = cleanedHtml
 
-        // Restore cursor after cleaning
         if (range && editorRef.current.firstChild) {
           try {
             const newRange = document.createRange()
@@ -171,14 +159,12 @@ export function RichTextEditor({
             selection?.removeAllRanges()
             selection?.addRange(newRange)
           } catch (error) {
-            // Ignore cursor restoration errors
           }
         }
       }
 
       onChange(textContent, cleanedHtml)
 
-      // Reset update flag after a brief delay
       setTimeout(() => {
         isUpdatingRef.current = false
       }, 10)
@@ -187,7 +173,6 @@ export function RichTextEditor({
 
   const handleKeyDown = useCallback(
     async (e: React.KeyboardEvent) => {
-      // Handle Enter key properly
       if (e.key === "Enter") {
         e.preventDefault()
         document.execCommand("insertHTML", false, "<br>")
@@ -195,7 +180,6 @@ export function RichTextEditor({
         return
       }
 
-      // Auto-complete on Tab (only if Gemini is configured and working)
       if (e.key === "Tab" && !e.shiftKey && geminiConfigured && apiStatus === "working") {
         e.preventDefault()
         const selection = window.getSelection()
@@ -222,7 +206,6 @@ export function RichTextEditor({
         return
       }
 
-      // Keyboard shortcuts
       if (e.ctrlKey || e.metaKey) {
         switch (e.key.toLowerCase()) {
           case "b":
@@ -281,10 +264,8 @@ export function RichTextEditor({
     try {
       const summary = await summarizeText(editorRef.current.textContent)
 
-      // Insert summary at the end with proper formatting
       const summaryHtml = `<div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid rgb(59, 130, 246);"><strong>📝 Summary:</strong> ${summary}</div>`
 
-      // Place cursor at end and insert
       const selection = window.getSelection()
       const range = document.createRange()
       range.selectNodeContents(editorRef.current)
@@ -346,10 +327,8 @@ export function RichTextEditor({
       const enhanced = await enhanceWriting(textToEnhance)
 
       if (selection && selection.toString().trim()) {
-        // Replace selected text
         document.execCommand("insertText", false, enhanced)
       } else {
-        // Replace all content
         editorRef.current!.innerHTML = enhanced
       }
 
@@ -396,7 +375,6 @@ export function RichTextEditor({
 
   return (
     <div className={`border rounded-lg overflow-hidden ${className}`}>
-      {/* API Key Warning */}
       {showApiKeyWarning && (
         <Alert className="m-4 border-orange-200 bg-orange-50 dark:bg-orange-900/20">
           <AlertCircle className="h-4 w-4" />
@@ -412,9 +390,7 @@ export function RichTextEditor({
         </Alert>
       )}
 
-      {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b bg-muted/50">
-        {/* Text Formatting */}
         <Button variant="ghost" size="sm" onClick={() => execCommand("bold")} className="h-8 w-8 p-0">
           <Bold className="h-4 w-4" />
         </Button>
@@ -427,7 +403,6 @@ export function RichTextEditor({
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Alignment */}
         <Button variant="ghost" size="sm" onClick={() => execCommand("justifyLeft")} className="h-8 w-8 p-0">
           <AlignLeft className="h-4 w-4" />
         </Button>
@@ -440,7 +415,6 @@ export function RichTextEditor({
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* Font Size */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 px-2">
@@ -458,7 +432,6 @@ export function RichTextEditor({
 
         <Separator orientation="vertical" className="h-6" />
 
-        {/* AI Features */}
         <Button
           variant="ghost"
           size="sm"
@@ -487,7 +460,6 @@ export function RichTextEditor({
         </div>
       </div>
 
-      {/* Editor */}
       <div
         ref={editorRef}
         contentEditable

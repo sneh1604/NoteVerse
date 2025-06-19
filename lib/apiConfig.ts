@@ -10,6 +10,5 @@ export function getApiKeyFromEnv(): string | null {
 }
 
 export function validateApiKeyFormat(key: string): boolean {
-  // Basic format validation for Gemini API keys
   return /^[A-Za-z0-9_-]{20,}$/.test(key)
 }

@@ -2,7 +2,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 
 let aiClient: GoogleGenerativeAI | null = null
 
-// Initialize the Gemini AI client with proper error handling
 const getGeminiClient = () => {
   if (aiClient) return aiClient
 
@@ -57,7 +56,6 @@ export async function summarizeText(text: string): Promise<string> {
   } catch (error: any) {
     console.error("Error summarizing text:", error)
 
-    // Handle specific error types
     if (error.message?.includes("API_KEY_INVALID")) {
       throw new Error("Invalid API key. Please check your configuration.")
     }
@@ -107,7 +105,6 @@ export async function getAutoComplete(text: string, context: string): Promise<st
       const response = await result.response
       const completion = response.text()
 
-      // Clean up the completion
       if (completion && completion.trim() !== "") {
         return completion.trim().replace(/^["']|["']$/g, "") // Remove quotes if present
       }
@@ -115,7 +112,6 @@ export async function getAutoComplete(text: string, context: string): Promise<st
       return ""
     } catch (error: any) {
       console.error("Error getting auto-completion:", error)
-      // Fail silently for auto-complete to not interrupt typing
       return ""
     }
   })
@@ -157,7 +153,6 @@ export async function enhanceWriting(text: string): Promise<string> {
   } catch (error: any) {
     console.error("Error enhancing writing:", error)
 
-    // Handle specific error types
     if (error.message?.includes("API_KEY_INVALID")) {
       throw new Error("Invalid API key. Please check your Gemini API key configuration.")
     }
@@ -178,7 +173,6 @@ export async function enhanceWriting(text: string): Promise<string> {
   }
 }
 
-// New function to get word definition
 export async function getWordDefinition(word: string): Promise<string> {
   try {
     const genAI = getGeminiClient()
@@ -205,7 +199,6 @@ export async function getWordDefinition(word: string): Promise<string> {
   }
 }
 
-// Utility function to check if Gemini API is configured
 export function isGeminiConfigured(): boolean {
   try {
     const client = getGeminiClient()
@@ -215,7 +208,6 @@ export function isGeminiConfigured(): boolean {
   }
 }
 
-// Test function to verify API key works
 export async function testGeminiConnection(): Promise<{ success: boolean; error?: string }> {
   try {
     const genAI = getGeminiClient()
@@ -239,7 +231,6 @@ export async function testGeminiConnection(): Promise<{ success: boolean; error?
   }
 }
 
-// Add a new function to validate API key
 export async function validateApiKey(): Promise<{ isValid: boolean; error?: string }> {
   try {
     const genAI = getGeminiClient()
@@ -257,7 +248,6 @@ export async function validateApiKey(): Promise<{ isValid: boolean; error?: stri
   }
 }
 
-// Add retry mechanism for API calls
 async function withRetry<T>(
   fn: () => Promise<T>,
   retries = 3,

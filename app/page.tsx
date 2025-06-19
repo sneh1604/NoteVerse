@@ -75,7 +75,6 @@ export default function NotesApp() {
     )
   }, [notes, searchTerm])
 
-  // Separate pinned and unpinned notes
   const { pinnedNotes, unpinnedNotes } = useMemo(() => {
     const pinned = filteredNotes.filter((note) => note.isPinned)
     const unpinned = filteredNotes.filter((note) => !note.isPinned)
@@ -165,14 +164,12 @@ export default function NotesApp() {
 
   const handleToggleEncryption = async (id: string, password?: string) => {
     if (password) {
-      // Direct encryption/decryption with password
       try {
         await toggleEncryption(id, password)
       } catch (error) {
         console.error("Failed to toggle encryption:", error)
       }
     } else {
-      // Show password prompt for encryption
       setEncryptingNoteId(id)
       setShowEncryptPrompt(true)
     }
@@ -220,7 +217,6 @@ export default function NotesApp() {
         )}
       >
         <div className="container mx-auto px-4 py-8 max-w-7xl">
-          {/* Database Error Alert */}
           <div className="max-w-7xl mx-auto space-y-4">
             {notesError && (
               <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
@@ -262,7 +258,6 @@ export default function NotesApp() {
             </div>
           ) : (
             <div className="max-w-7xl mx-auto space-y-8">
-              {/* Pinned Notes Section */}
               {pinnedNotes.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -285,7 +280,6 @@ export default function NotesApp() {
                 </div>
               )}
 
-              {/* Regular Notes Section */}
               {unpinnedNotes.length > 0 && (
                 <div className="space-y-4">
                   {pinnedNotes.length > 0 && (

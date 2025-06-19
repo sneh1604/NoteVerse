@@ -5,15 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Removes undefined values from an object to prevent Firestore errors
- */
+
 export function cleanFirestoreData<T extends Record<string, any>>(data: T): Partial<T> {
   const cleaned: Partial<T> = {}
 
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined) {
-      // Handle nested objects
       if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)) {
         const cleanedNested = cleanFirestoreData(value)
         if (Object.keys(cleanedNested).length > 0) {
@@ -28,9 +25,7 @@ export function cleanFirestoreData<T extends Record<string, any>>(data: T): Part
   return cleaned
 }
 
-/**
- * Validates note data before saving
- */
+
 export function validateNoteData(note: any): boolean {
   return (
     typeof note.title === "string" &&

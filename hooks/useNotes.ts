@@ -20,10 +20,8 @@ export function useNotes(userId: string | null) {
       return
     }
 
-    // Try the optimized query first, fall back to simple query if index doesn't exist
     const setupQuery = async () => {
       try {
-        // First, try the query with ordering (requires composite index)
         const optimizedQuery = query(
           collection(db, "notes"),
           where("userId", "==", userId),
@@ -38,14 +36,12 @@ export function useNotes(userId: string | null) {
               ...doc.data(),
               createdAt: doc.data().createdAt?.toDate() || new Date(),
               updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-              // Ensure backward compatibility for existing notes
               color: doc.data().color || "default",
               isPinned: doc.data().isPinned || false,
               isEncrypted: doc.data().isEncrypted || false,
               encryptedData: doc.data().encryptedData || undefined,
             })) as Note[]
 
-            // Sort pinned notes to the top, then by updatedAt
             const sortedNotes = notesData.sort((a, b) => {
               if (a.isPinned && !b.isPinned) return -1
               if (!a.isPinned && b.isPinned) return 1
@@ -59,7 +55,6 @@ export function useNotes(userId: string | null) {
           (error) => {
             console.error("Firestore query error:", error)
 
-            // If it's an index error, fall back to simple query
             if (error.code === "failed-precondition") {
               console.log("Falling back to simple query without ordering...")
               setupSimpleQuery()
@@ -77,7 +72,6 @@ export function useNotes(userId: string | null) {
       }
     }
 
-    // Fallback query without ordering (doesn't require composite index)
     const setupSimpleQuery = () => {
       try {
         const simpleQuery = query(collection(db, "notes"), where("userId", "==", userId))
@@ -90,14 +84,12 @@ export function useNotes(userId: string | null) {
               ...doc.data(),
               createdAt: doc.data().createdAt?.toDate() || new Date(),
               updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-              // Ensure backward compatibility for existing notes
               color: doc.data().color || "default",
               isPinned: doc.data().isPinned || false,
               isEncrypted: doc.data().isEncrypted || false,
               encryptedData: doc.data().encryptedData || undefined,
             })) as Note[]
 
-            // Sort pinned notes to the top, then by updatedAt
             const sortedNotes = notesData.sort((a, b) => {
               if (a.isPinned && !b.isPinned) return -1
               if (!a.isPinned && b.isPinned) return 1
@@ -139,7 +131,6 @@ export function useNotes(userId: string | null) {
 
   const addNote = async (noteData: CreateNoteData) => {
     try {
-      // Validate the note data
       const noteToSave = {
         ...noteData,
         tags: noteData.tags || [],
@@ -154,7 +145,6 @@ export function useNotes(userId: string | null) {
         throw new Error("Invalid note data")
       }
 
-      // Clean the data to remove undefined values
       const cleanNote = cleanFirestoreData(noteToSave)
 
       await addDoc(collection(db, "notes"), cleanNote)
@@ -171,7 +161,6 @@ export function useNotes(userId: string | null) {
         updatedAt: new Date(),
       }
 
-      // Clean the data to remove undefined values
       const cleanUpdates = cleanFirestoreData(updateData)
 
       if (Object.keys(cleanUpdates).length === 0) {

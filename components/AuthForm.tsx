@@ -39,13 +39,11 @@ export function AuthForm({
   const [localError, setLocalError] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
-  // Sign In Form State
   const [signInData, setSignInData] = useState({
     email: "",
     password: "",
   })
 
-  // Sign Up Form State
   const [signUpData, setSignUpData] = useState({
     displayName: "",
     email: "",
@@ -53,7 +51,6 @@ export function AuthForm({
     confirmPassword: "",
   })
 
-  // Reset Password State
   const [resetEmail, setResetEmail] = useState("")
 
   const clearMessages = () => {
@@ -143,7 +140,6 @@ export function AuthForm({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Google Sign In */}
         <Button onClick={onGoogleSignIn} disabled={loading || isSubmitting} className="w-full" size="lg">
           <Chrome className="mr-2 h-5 w-5" />
           {loading ? "Signing in..." : "Continue with Google"}
@@ -158,7 +154,6 @@ export function AuthForm({
           </div>
         </div>
 
-        {/* Error/Success Messages */}
         {displayError && (
           <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
             {displayError}
@@ -171,7 +166,6 @@ export function AuthForm({
           </div>
         )}
 
-        {/* Email Auth Tabs */}
         <Tabs
           value={activeTab}
           onValueChange={(value) => {
@@ -184,7 +178,6 @@ export function AuthForm({
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
 
-          {/* Sign In Tab */}
           <TabsContent value="signin" className="space-y-4">
             <form onSubmit={handleSignIn} className="space-y-4">
               <div className="space-y-2">
@@ -245,7 +238,6 @@ export function AuthForm({
             </div>
           </TabsContent>
 
-          {/* Sign Up Tab */}
           <TabsContent value="signup" className="space-y-4">
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
@@ -337,7 +329,6 @@ export function AuthForm({
           </TabsContent>
         </Tabs>
 
-        {/* Password Reset Modal */}
         {activeTab === "reset" && (
           <div className="space-y-4">
             <div className="text-center">

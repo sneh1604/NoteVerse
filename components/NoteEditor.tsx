@@ -39,14 +39,11 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
   const [isEncrypting, setIsEncrypting] = useState(false)
   const [encryptError, setEncryptError] = useState("")
 
-  // Ensure component is mounted before applying theme
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Memoize color classes to prevent expensive recalculations
   const colorClasses = useMemo(() => {
-    // Don't apply theme-specific classes until mounted to prevent hydration mismatch
     if (!mounted) {
       return "bg-white border-gray-200" // Default fallback
     }
@@ -89,19 +86,15 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
     }
 
     if (note) {
-      // For updates, only include fields that have changed or are defined
       const updates: UpdateNoteData = {
         ...baseNoteData,
-        // Only include summary if it exists
         ...(note.summary !== undefined && { summary: note.summary }),
       }
       onUpdate(note.id, updates)
     } else {
-      // For new notes, create clean data
       const newNoteData: CreateNoteData = {
         ...baseNoteData,
         isEncrypted: false,
-        // Don't include summary for new notes unless it's explicitly set
       }
       onSave(newNoteData)
     }
@@ -127,9 +120,7 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
     }
   }
 
-  // Optimized color change handler
   const handleColorChange = (colorKey: string) => {
-    // Use requestAnimationFrame to prevent UI blocking
     requestAnimationFrame(() => {
       setColor(colorKey)
     })
@@ -150,7 +141,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
           <DialogTitle className="flex items-center justify-between">
             <span>{note ? "Edit Note" : "Create New Note"}</span>
             <div className="flex items-center gap-2">
-              {/* Pin Toggle */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -160,7 +150,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
                 {isPinned ? <Pin className="h-4 w-4 fill-current" /> : <PinOff className="h-4 w-4" />}
               </Button>
 
-              {/* Encryption Toggle */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -170,7 +159,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
                 {note?.isEncrypted ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
               </Button>
 
-              {/* Color Picker */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
@@ -196,7 +184,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4">
-          {/* Title */}
           <Input
             placeholder="Note title..."
             value={title}
@@ -204,7 +191,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
             className="text-lg font-semibold bg-transparent border-0 shadow-none focus-visible:ring-0 px-0"
           />
 
-          {/* Tags */}
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               {tags.map((tag, index) => (
@@ -228,7 +214,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
             </div>
           </div>
 
-          {/* Rich Text Editor */}
           <div className="flex-1 overflow-hidden">
             <RichTextEditor
               content={htmlContent}
@@ -241,7 +226,6 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
             />
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={onClose}>
               Cancel
@@ -265,12 +249,10 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
 
             try {
               if (note?.isEncrypted) {
-                // Decrypt existing note
                 if (note.encryptedData) {
                   const decrypted = await decryptContent(note.encryptedData, password)
                   setContent(decrypted)
                   setHtmlContent(decrypted)
-                  // Update note to remove encryption
                   onUpdate(note.id, {
                     isEncrypted: false,
                     content: decrypted,
@@ -279,9 +261,7 @@ export function NoteEditor({ note, isOpen, onClose, onSave, onUpdate, userId }: 
                   })
                 }
               } else {
-                // Encrypt current content
                 const encrypted = await encryptContent(htmlContent || content, password)
-                // Update note with encryption
                 if (note) {
                   onUpdate(note.id, {
                     isEncrypted: true,

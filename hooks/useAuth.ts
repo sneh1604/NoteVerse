@@ -38,7 +38,6 @@ export function useAuth() {
 
   const signInWithGoogle = async () => {
     try {
-      // Configure the Google provider with additional settings
       googleProvider.setCustomParameters({
         prompt: "select_account",
       })
@@ -48,7 +47,6 @@ export function useAuth() {
     } catch (error: any) {
       console.error("Error signing in with Google:", error)
 
-      // Handle specific Firebase auth errors
       if (error.code === "auth/unauthorized-domain") {
         alert(
           "Authentication Error: This domain is not authorized for Google Sign-In. Please contact the administrator or try from an authorized domain.",

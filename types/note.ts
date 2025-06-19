@@ -26,15 +26,12 @@ export interface User {
   photoURL: string | null
 }
 
-// Helper type for creating notes without system fields
 export type CreateNoteData = Omit<Note, "id" | "createdAt" | "updatedAt"> & {
   summary?: string | null
 }
 
-// Helper type for updating notes
 export type UpdateNoteData = Partial<Omit<Note, "id" | "createdAt" | "updatedAt" | "userId">>
 
-// Note color options
 export const NOTE_COLORS = {
   default: {
     name: "Default",

@@ -101,7 +101,6 @@ export function PasswordPrompt({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Password Input */}
           <div className="space-y-2">
             <Label htmlFor="password">{isEncryptMode ? "Password" : "Enter Password"}</Label>
             <div className="relative">
@@ -127,7 +126,6 @@ export function PasswordPrompt({
             </div>
           </div>
 
-          {/* Confirm Password (Encrypt mode only) */}
           {isEncryptMode && (
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -158,7 +156,6 @@ export function PasswordPrompt({
             </div>
           )}
 
-          {/* Password Generator (Encrypt mode only) */}
           {isEncryptMode && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">

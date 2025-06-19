@@ -76,7 +76,6 @@ export function LoginScreen({
         </div>
       </div>
 
-      {/* Right Side - Auth Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center lg:hidden space-y-2 mb-8">

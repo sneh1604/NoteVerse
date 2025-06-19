@@ -1,6 +1,5 @@
 "use client"
 
-// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type { ToastActionElement, ToastProps as ToastPropsType } from "@/components/ui/toast"
@@ -88,8 +87,7 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+     
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -186,26 +184,5 @@ function useToast() {
   }
 }
 
-// type ToastProps = {
-//   title?: string
-//   description?: string
-//   variant?: "default" | "destructive"
-// }
-
-// function useToast() {
-//   const toast = React.useCallback((props: ToastProps) => {
-//     // Simple toast implementation - you can enhance this
-//     const message = props.title + (props.description ? ': ' + props.description : '')
-//     if (props.variant === 'destructive') {
-//       console.error(message)
-//       alert('Error: ' + message)
-//     } else {
-//       console.log(message)
-//       // You could implement a proper toast notification here
-//     }
-//   }, [])
-
-//   return { toast }
-// }
 
 export { useToast, toast }

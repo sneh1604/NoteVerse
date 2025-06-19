@@ -24,7 +24,6 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
   return (
     <header className="fixed top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-2 sm:px-4 md:px-6">
-        {/* Left Section */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-[50px] sm:min-w-[240px]">
           <Button 
             variant="ghost" 
@@ -40,7 +39,6 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
           </div>
         </div>
 
-        {/* Center Section - Search */}
         <div className="flex-1 max-w-[750px] mx-auto relative">
           <div className="absolute inset-y-0 left-2 sm:left-3 flex items-center pointer-events-none">
             <Search className="h-4 w-4 text-muted-foreground" />
@@ -66,9 +64,7 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
           )}
         </div>
 
-        {/* Right Section */}
         <div className="flex items-center gap-1 sm:gap-2 min-w-[100px] sm:min-w-[240px] justify-end">
-          {/* New Note Button - Desktop */}
           <Button
             onClick={onNewNote}
             size="sm"
@@ -78,7 +74,6 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
             <span>New Note</span>
           </Button>
 
-          {/* New Note Button - Mobile */}
           <Button
             onClick={onNewNote}
             size="icon"
@@ -87,7 +82,6 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
             <Plus className="h-4 w-4" />
           </Button>
 
-          {/* Settings Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
@@ -105,14 +99,12 @@ export function Header({ user, onLogout, onNewNote, searchTerm, onSearchChange, 
               <DropdownMenuItem onClick={() => setTheme("dark")}>
                 <Moon className="h-4 w-4 mr-2" /> Dark
               </DropdownMenuItem>
-              {/* Mobile-only menu items */}
               <DropdownMenuItem className="md:hidden" onClick={onNewNote}>
                 <Plus className="h-4 w-4 mr-2" /> New Note
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
