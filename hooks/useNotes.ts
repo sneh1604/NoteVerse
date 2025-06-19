@@ -235,5 +235,28 @@ export function useNotes(userId: string | null) {
     }
   }
 
-  return { notes, loading, error, addNote, updateNote, deleteNote, togglePin, changeColor, toggleEncryption }
+  const toggleArchive = async (id: string) => {
+    try {
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+      await updateNote(id, { isArchived: !note.isArchived });
+    } catch (error) {
+      console.error("Error toggling archive:", error);
+      throw error;
+    }
+  };
+
+  return { 
+    notes: notes.filter(note => !note.isArchived), 
+    archivedNotes: notes.filter(note => note.isArchived),
+    loading, 
+    error, 
+    addNote, 
+    updateNote, 
+    deleteNote, 
+    togglePin, 
+    changeColor, 
+    toggleEncryption,
+    toggleArchive 
+  };
 }

@@ -11,6 +11,7 @@ export interface Note {
   color: string
   isPinned: boolean
   isEncrypted: boolean
+  isArchived: boolean
   encryptedData?: {
     encryptedContent: string
     encryptedHtmlContent: string

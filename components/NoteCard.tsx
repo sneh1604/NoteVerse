@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { MoreVertical, Edit, Trash2, Calendar, Pin, PinOff, Palette, Lock, Unlock, Shield } from "lucide-react"
+import { MoreVertical, Edit, Trash2, Calendar, Pin, PinOff, Palette, Lock, Unlock, Shield, Archive, ArchiveRestore } from "lucide-react"
 import type { Note } from "@/types/note"
 import { NOTE_COLORS, type NoteColor } from "@/types/note"
 import { format } from "date-fns"
@@ -26,9 +26,18 @@ interface NoteCardProps {
   onTogglePin: (id: string, isPinned: boolean) => void
   onChangeColor: (id: string, color: string) => void
   onToggleEncryption: (id: string, password?: string) => void
+  onToggleArchive: (id: string) => void
 }
 
-export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, onToggleEncryption }: NoteCardProps) {
+export function NoteCard({ 
+  note, 
+  onEdit, 
+  onDelete, 
+  onTogglePin, 
+  onChangeColor, 
+  onToggleEncryption,
+  onToggleArchive 
+}: NoteCardProps) {
   const [showFullContent, setShowFullContent] = useState(false)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [decryptedContent, setDecryptedContent] = useState<string | null>(null)
@@ -246,6 +255,20 @@ export function NoteCard({ note, onEdit, onDelete, onTogglePin, onChangeColor, o
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onToggleArchive(note.id)}>
+                  {note.isArchived ? (
+                    <>
+                      <ArchiveRestore className="h-4 w-4 mr-2" />
+                      Unarchive
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archive
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDelete(note.id)} className="text-destructive">

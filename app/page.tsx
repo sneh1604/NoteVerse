@@ -39,6 +39,7 @@ export default function NotesApp() {
     togglePin,
     changeColor,
     toggleEncryption,
+    toggleArchive,
   } = useNotes(user?.uid || null)
 
    const [mounted, setMounted] = useState(false)
@@ -274,6 +275,7 @@ export default function NotesApp() {
                         onTogglePin={handleTogglePin}
                         onChangeColor={handleChangeColor}
                         onToggleEncryption={handleToggleEncryption}
+                        onToggleArchive={toggleArchive}
                       />
                     ))}
                   </div>
@@ -297,6 +299,7 @@ export default function NotesApp() {
                         onTogglePin={handleTogglePin}
                         onChangeColor={handleChangeColor}
                         onToggleEncryption={handleToggleEncryption}
+                        onToggleArchive={toggleArchive}
                       />
                     ))}
                   </div>
