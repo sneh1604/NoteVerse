@@ -15,17 +15,7 @@ const sidebarItems = [
     icon: ArchiveIcon,
     label: "Archive",
     href: "/archive",
-  },
-  {
-    icon: TrashIcon,
-    label: "Trash",
-    href: "/trash",
-  },
-  {
-    icon: Settings2Icon,
-    label: "Settings",
-    href: "/settings",
-  },
+  }
 ]
 
 interface SidebarProps {
